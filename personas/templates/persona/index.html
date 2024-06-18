@@ -1,0 +1,168 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Datos de los Clientes CMAX</title>
+    <style>
+        .update-form {
+            display: none;
+        }
+    </style>
+    <link rel="stylesheet" type="text/css" href="{% static 'css/styles.css' %}">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function(){
+            // Validación de formulario
+            $('form').on('submit', function(event){
+                var telefono = $('input[name="telefono"]').val();
+                var email = $('input[name="correo_electronico"]').val();
+                var telefonoPattern = /^[0-9]{10,20}$/;
+                var emailPattern = /^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$/;
+
+                if (!telefonoPattern.test(telefono)) {
+                    alert('Teléfono inválido.');
+                    event.preventDefault();
+                } else if (!emailPattern.test(email)) {
+                    alert('Correo electrónico inválido.');
+                    event.preventDefault();
+                } else {
+                    // Envío del formulario usando AJAX
+                    $.ajax({
+                        type: 'POST',
+                        url: '{% url "agregar" %}',
+                        data: $('form').serialize(),
+                        success: function(response) {
+                            alert('Cliente agregado correctamente.');
+                            // Limpiar formulario
+                            $('form')[0].reset();
+                            // Actualizar tabla de datos
+                            cargarDatos();
+                        },
+                        error: function(error) {
+                            console.error('Error al agregar cliente:', error);
+                            alert('Hubo un error al agregar el cliente.');
+                        }
+                    });
+                    event.preventDefault(); // Evitar el envío normal del formulario
+                }
+            });
+
+            // Cargar datos al cargar la página
+            cargarDatos();
+        });
+
+        // Función para cargar datos de la tabla
+        function cargarDatos() {
+            fetch('/obtener-datos/')
+                .then(response => response.json())
+                .then(datos => {
+                    // Limpiar tabla
+                    $('#tabla-datos tbody').empty();
+
+                    // Insertar filas de datos
+                    datos.forEach(dato => {
+                        var row = `<tr>
+                            <td>${dato.dni}</td>
+                            <td>${dato.nombres}</td>
+                            <td>${dato.apellidos}</td>
+                            <td>${dato.sexo}</td>
+                            <td>${dato.fecha_nacimiento}</td>
+                            <td>${dato.direccion}</td>
+                            <td>${dato.telefono}</td>
+                            <td>${dato.correo_electronico}</td>
+                        </tr>`;
+                        $('#tabla-datos tbody').append(row);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error al obtener los datos:', error);
+                });
+        }
+
+        // Función para descargar CSV
+        function descargarCSV() {
+            $.ajax({
+                type: 'GET',
+                url: '{% url "descargar_csv" %}',
+                success: function(response) {
+                    // Crear un enlace de descarga invisible
+                    var hiddenElement = document.createElement('a');
+                    hiddenElement.href = 'data:text/csv;charset=utf-8,' + encodeURI(response);
+                    hiddenElement.target = '_blank';
+                    hiddenElement.download = 'clientes.csv';
+                    document.body.appendChild(hiddenElement);
+                    hiddenElement.click();
+                    document.body.removeChild(hiddenElement);
+                },
+                error: function(error) {
+                    console.error('Error al descargar CSV:', error);
+                    alert('Hubo un error al descargar el archivo CSV.');
+                }
+            });
+        }
+    </script>
+</head>
+<body>
+    <header><p>CMAX C.A.</p></header>
+
+    <h1>Datos de los Clientes CMAX</h1>
+
+    <div class='contenedor'>
+        <main>
+            <div class='texto'>
+                <p><b>Nueva Entrada</b></p>
+                <form method="post" action="/agregar/">
+                    {% csrf_token %}
+                    <input type="text" name="dni" placeholder="DNI / Cédula" required><br>
+                    <input type="text" name="nombres" placeholder="Nombres" required><br>
+                    <input type="text" name="apellidos" placeholder="Apellidos" required><br>
+                    <select name="sexo" required>
+                        <option value="M">Masculino</option>
+                        <option value="F">Femenino</option>
+                    </select><br>
+                    <input type="date" name="fecha_nacimiento" placeholder="Fecha de Nacimiento" required><br>
+                    <input type="text" name="direccion" placeholder="Dirección" required><br>
+                    <input type="text" name="telefono" placeholder="Teléfono" required><br>
+                    <input type="email" name="correo_electronico" placeholder="Correo Electrónico" required><br>
+                    <button type="submit">Agregar</button>
+                </form>
+            </div>
+        </main>
+        <aside>
+            <img src="{% static 'images/cliente.jpg' %}" alt="Cliente">
+        </aside>
+    </div>
+
+    <br>
+    <h2>Lista de Clientes</h2>
+    <div class='contenedor'>
+        <main>
+            <table id="tabla-datos">
+                <thead>
+                    <tr>
+                        <th>DNI / Cédula</th>
+                        <th>Nombres</th>
+                        <th>Apellidos</th>
+                        <th>Sexo</th>
+                        <th>Fecha de Nacimiento</th>
+                        <th>Dirección</th>
+                        <th>Teléfono</th>
+                        <th>Correo Electrónico</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Datos de la tabla se insertarán aquí -->
+                </tbody>
+            </table>
+            <button onclick="descargarCSV()">Descargar CSV</button>
+        </main>
+    </div>
+
+    <br></br>
+
+    <footer>Hecho por Carlos Figuera</footer>
+</body>
+</html>
